@@ -42,13 +42,26 @@ export async function POST(request: NextRequest) {
       outOfStock,
     }
 
-    // Write back to file
-    await writeFile(filePath, JSON.stringify(cakes, null, 2), "utf-8")
+    // Write back to file. On serverless platforms (Vercel) filesystem writes may fail.
+    // Attempt to write, but if it fails we still return success so the admin UI
+    // can update immediately. Persisting changes should be handled by a DB.
+    try {
+      await writeFile(filePath, JSON.stringify(cakes, null, 2), "utf-8")
+    } catch (fsError: any) {
+      console.warn('[products/update-stock] Could not write to file system (non-fatal):', fsError?.message || fsError)
+      // Fall through and return success with a warning so the UI updates.
+      return NextResponse.json({
+        id: productId,
+        outOfStock,
+        message: 'Stock status updated locally (file write failed on server). Persist changes via a database.',
+        warning: true,
+      })
+    }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       id: productId,
       outOfStock,
-      message: "Stock status updated successfully" 
+      message: "Stock status updated successfully",
     })
   } catch (error: any) {
     console.error("[products/update-stock] Error:", error)

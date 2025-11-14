@@ -13,14 +13,16 @@ const ToastViewport = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Viewport>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Viewport>
 >(({ className, ...props }, ref) => (
-  <ToastPrimitives.Viewport
-    ref={ref}
-    className={cn(
-      'fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]',
-      className,
-    )}
-    {...props}
-  />
+    <ToastPrimitives.Viewport
+      ref={ref}
+      className={cn(
+        // Mobile: bottom-center for a prominent, pleasant position when adding items to cart
+        // Desktop/tablet: bottom-right to avoid overlapping main content
+        'fixed bottom-6 left-1/2 transform -translate-x-1/2 z-100 flex flex-col p-4 md:bottom-6 md:right-6 md:left-auto md:transform-none md:translate-x-0 md:max-w-[420px]',
+        className,
+      )}
+      {...props}
+    />
 ))
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
