@@ -22,10 +22,32 @@ const TAX_RATE = 0.05 // 5% tax
 export default function CartPage() {
   const [cart, setCart] = useState<CartItemData[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [outOfStockIds, setOutOfStockIds] = useState<Set<number>>(new Set())
+
+  // Fetch current out-of-stock status from API
+  const fetchOutOfStockStatus = async () => {
+    try {
+      const res = await fetch(`/api/products`, { cache: "no-store" })
+      if (res.ok) {
+        const products = await res.json()
+        const outOfStock = new Set(products.filter((p: any) => p.outOfStock).map((p: any) => p.id))
+        setOutOfStockIds(outOfStock)
+      }
+    } catch (err) {
+      console.error("Failed to fetch product stock status:", err)
+    }
+  }
 
   useEffect(() => {
     setCart(loadCart())
     setIsLoading(false)
+  }, [])
+
+  // Fetch out-of-stock status when cart loads
+  useEffect(() => {
+    if (cart.length > 0) {
+      fetchOutOfStockStatus()
+    }
   }, [])
 
   // Persist cart to localStorage when it changes, but skip the initial load
@@ -85,6 +107,7 @@ export default function CartPage() {
   const total = subtotal + tax
 
   const isEmpty = cart.length === 0
+  const hasOutOfStockItems = cart.some((item) => outOfStockIds.has(item.cakeId))
 
   return (
     <>
@@ -108,6 +131,11 @@ export default function CartPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {hasOutOfStockItems && (
+              <div className="lg:col-span-2 mb-4 p-4 bg-red-50 border border-red-300 rounded-lg">
+                <p className="text-red-700 font-semibold">⚠️ Some items in your cart are out of stock. Please remove them before proceeding.</p>
+              </div>
+            )}
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-4">
               {cart.map((item) => (
@@ -151,7 +179,10 @@ export default function CartPage() {
                 </div>
 
                 <Link href="/checkout" className="w-full">
-                  <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                  <Button 
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                    disabled={hasOutOfStockItems}
+                  >
                     Proceed to Checkout
                   </Button>
                 </Link>

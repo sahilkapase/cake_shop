@@ -79,7 +79,7 @@ CUSTOMER DETAILS:
 Name: ${order.delivery.name}
 Phone: ${order.delivery.phone}
 Address: ${order.delivery.address}${order.delivery.postalCode ? `, ${order.delivery.postalCode}` : ""}
-Delivery Date: ${new Date(order.delivery.deliveryDate).toLocaleDateString("en-IN")}
+Delivery Date: ${order.delivery.deliveryDate ? new Date(order.delivery.deliveryDate).toLocaleDateString("en-IN") : "N/A"}
 
 ITEMS:
 ${order.items.map((item) => `${item.cakeName} (${item.weight}) x ${item.quantity} - ₹${item.pricePerUnit * item.quantity}`).join("\n")}

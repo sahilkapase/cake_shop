@@ -22,7 +22,22 @@ export default function CheckoutPage() {
   const [cart, setCart] = useState<CartItemData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [outOfStockIds, setOutOfStockIds] = useState<Set<number>>(new Set())
   const { initiatePayment, isProcessing } = useRazorpayPayment()
+
+  // Fetch current out-of-stock status from API
+  const fetchOutOfStockStatus = async () => {
+    try {
+      const res = await fetch(`/api/products`, { cache: "no-store" })
+      if (res.ok) {
+        const products = await res.json()
+        const outOfStock = new Set(products.filter((p: any) => p.outOfStock).map((p: any) => p.id)) as Set<number>
+        setOutOfStockIds(outOfStock)
+      }
+    } catch (err) {
+      console.error("Failed to fetch product stock status:", err)
+    }
+  }
 
   const [formData, setFormData] = useState({
     name: "",
@@ -41,6 +56,8 @@ export default function CheckoutPage() {
       router.push("/cart")
     } else {
       setCart(cartItems)
+      // Fetch out-of-stock status when checkout loads
+      fetchOutOfStockStatus()
     }
     setIsLoading(false)
   }, [router])
@@ -90,6 +107,12 @@ export default function CheckoutPage() {
 
   const handleCheckout = async () => {
     if (!validateForm()) return
+
+    // Check if any items are out of stock before processing payment
+    if (cart.some((item) => outOfStockIds.has(item.cakeId))) {
+      alert("Some items in your cart are out of stock. Please go back to your cart and remove them.")
+      return
+    }
 
     setIsSubmitting(true)
 
@@ -175,6 +198,12 @@ export default function CheckoutPage() {
         <h1 className="text-3xl font-bold font-serif mb-8">Checkout</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Out-of-stock warning */}
+          {cart.some((item) => outOfStockIds.has(item.cakeId)) && (
+            <div className="lg:col-span-3 mb-4 p-4 bg-red-50 border border-red-300 rounded-lg">
+              <p className="text-red-700 font-semibold">⚠️ Some items in your cart are out of stock. Please return to your cart and remove them.</p>
+            </div>
+          )}
           {/* Delivery Form */}
           <div className="lg:col-span-2 space-y-6">
             <Card className="p-6">
@@ -346,7 +375,7 @@ export default function CheckoutPage() {
 
               <Button
                 onClick={handleCheckout}
-                disabled={isSubmitting || isProcessing}
+                disabled={isSubmitting || isProcessing || cart.some((item) => outOfStockIds.has(item.cakeId))}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 {isSubmitting || isProcessing ? "Processing..." : "Pay with Razorpay"}
