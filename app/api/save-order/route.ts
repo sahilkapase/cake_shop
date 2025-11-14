@@ -32,15 +32,14 @@ interface SaveOrderPayload {
 
 export async function POST(request: Request) {
   try {
-    // First, test database connection
+    // First, test database connection. If it fails, log a warning but continue
+    // because createOrder() has a fallback and we don't want to block the
+    // checkout flow for customers when the DB is temporarily unavailable.
     const { testConnection } = await import("@/lib/db")
     const connectionTest = await testConnection()
     if (!connectionTest.connected) {
-      console.error("[save-order] Database connection failed:", connectionTest.error)
-      return NextResponse.json(
-        { error: "Database connection failed", details: connectionTest.error },
-        { status: 503 }
-      )
+      console.warn("[save-order] Database connection test failed (continuing with fallback):", connectionTest.error)
+      // do not return; allow createOrder() to attempt and fall back if needed
     }
 
     const body = (await request.json()) as SaveOrderPayload
