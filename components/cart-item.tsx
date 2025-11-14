@@ -26,7 +26,7 @@ export function CartItem({ id, cakeName, weight, quantity, pricePerUnit, onUpdat
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 border border-border rounded-lg p-1">
-            <Button variant="ghost" size="sm" onClick={() => onUpdateQuantity(id, Math.max(1, quantity - 1))}>
+            <Button variant="ghost" size="sm" onClick={() => onUpdateQuantity(id, Math.max(0, quantity - 1))}>
               <Minus className="w-3 h-3" />
             </Button>
             <span className="w-6 text-center text-sm">{quantity}</span>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { addToCart, saveCart } from "@/lib/cart"
+import { toast } from "@/hooks/use-toast"
 
 interface ProductCardProps {
   id: number
@@ -31,7 +32,7 @@ export function ProductCard({ id, name, price, description, image, outOfStock = 
       pricePerUnit: price,
     }
     addToCart(cartItem)
-    alert("Added to cart!")
+    toast({ title: "Added to cart!", description: `${name} added to cart.` })
   }
 
   const handleBuyNow = (e: React.MouseEvent) => {
