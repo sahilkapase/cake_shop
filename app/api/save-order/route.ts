@@ -119,6 +119,14 @@ export async function POST(request: Request) {
         createdAt: now,
         updatedAt: now,
       }
+      // Save transient order so subsequent GET /api/orders/:id can retrieve it
+      try {
+        const { saveTransientOrder } = await import('@/lib/transient-orders')
+        saveTransientOrder(order.id, order)
+        console.log(`[save-order] Saved transient order ${order.id} in memory store`)
+      } catch (tErr) {
+        console.warn('[save-order] Failed to save transient order in memory store:', tErr?.message || tErr)
+      }
     }
 
     // Add a small delay to ensure transaction is fully committed (important for serverless DBs like Neon)

@@ -16,16 +16,23 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   
   try {
     console.log(`[orders/${normalizedId}] Fetching order with ID: "${normalizedId}"`)
-    
+    // First check transient in-memory store (used when DB persistence is unavailable)
+    try {
+      const { getTransientOrder } = await import('@/lib/transient-orders')
+      const transient = getTransientOrder(normalizedId)
+      if (transient) {
+        console.log(`[orders/${normalizedId}] Found transient order in memory store`)
+        return NextResponse.json(transient)
+      }
+    } catch (tErr) {
+      console.warn(`[orders/${normalizedId}] transient store check failed:`, tErr?.message || tErr)
+    }
     // First, test database connection
     const { testConnection } = await import("@/lib/db")
     const connectionTest = await testConnection()
     if (!connectionTest.connected) {
-      console.error(`[orders/${normalizedId}] Database connection failed:`, connectionTest.error)
-      return NextResponse.json(
-        { error: "Database connection failed", details: connectionTest.error },
-        { status: 503 }
-      )
+      console.warn(`[orders/${normalizedId}] Database connection failed (continuing with retries):`, connectionTest.error)
+      // don't return; we'll try to find the order with retries
     }
     
     // Retry logic for database queries (handles eventual consistency)
