@@ -1,8 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { validateAdminToken } from "@/lib/admin"
-import { readFile, writeFile } from "fs/promises"
-import { join } from "path"
-import { existsSync } from "fs"
+import { setOutOfStock } from "@/lib/db"
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,42 +18,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid request data" }, { status: 400 })
     }
 
-    // Read the current cakes.json file
-    const filePath = join(process.cwd(), "lib", "cakes.json")
-    
-    if (!existsSync(filePath)) {
-      return NextResponse.json({ error: "Products file not found" }, { status: 404 })
-    }
+    // Update stock status in database
+    const success = await setOutOfStock(productId, outOfStock)
 
-    const fileContent = await readFile(filePath, "utf-8")
-    const cakes = JSON.parse(fileContent)
-
-    // Find and update the product
-    const productIndex = cakes.findIndex((c: any) => c.id === productId)
-    if (productIndex === -1) {
-      return NextResponse.json({ error: "Product not found" }, { status: 404 })
-    }
-
-    // Update the product
-    cakes[productIndex] = {
-      ...cakes[productIndex],
-      outOfStock,
-    }
-
-    // Write back to file. On serverless platforms (Vercel) filesystem writes may fail.
-    // Attempt to write, but if it fails we still return success so the admin UI
-    // can update immediately. Persisting changes should be handled by a DB.
-    try {
-      await writeFile(filePath, JSON.stringify(cakes, null, 2), "utf-8")
-    } catch (fsError: any) {
-      console.warn('[products/update-stock] Could not write to file system (non-fatal):', fsError?.message || fsError)
-      // Fall through and return success with a warning so the UI updates.
-      return NextResponse.json({
-        id: productId,
-        outOfStock,
-        message: 'Stock status updated locally (file write failed on server). Persist changes via a database.',
-        warning: true,
-      })
+    if (!success) {
+      return NextResponse.json(
+        { error: "Failed to update stock status (database unavailable)" },
+        { status: 503 }
+      )
     }
 
     return NextResponse.json({

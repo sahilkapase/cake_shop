@@ -306,3 +306,68 @@ export async function deleteOrder(id: string): Promise<boolean> {
     client.release()
   }
 }
+
+// Out of Stock Management
+async function ensureOutOfStockTable() {
+  const client = await pool.connect()
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS out_of_stock_items (
+        product_id INTEGER PRIMARY KEY,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `)
+  } finally {
+    client.release()
+  }
+}
+
+export async function setOutOfStock(productId: number, outOfStock: boolean): Promise<boolean> {
+  if (!connectionString) {
+    console.error("[db] setOutOfStock: No database connection string")
+    return false
+  }
+  
+  await ensureOutOfStockTable()
+  const client = await pool.connect()
+  try {
+    if (outOfStock) {
+      // Insert or update to mark as out of stock
+      await client.query(
+        `INSERT INTO out_of_stock_items (product_id, updated_at) 
+         VALUES ($1, CURRENT_TIMESTAMP)
+         ON CONFLICT (product_id) DO UPDATE SET updated_at = CURRENT_TIMESTAMP`,
+        [productId]
+      )
+    } else {
+      // Delete to mark as in stock
+      await client.query("DELETE FROM out_of_stock_items WHERE product_id = $1", [productId])
+    }
+    console.log(`[db] setOutOfStock: Product ${productId} set to outOfStock=${outOfStock}`)
+    return true
+  } catch (err: any) {
+    console.error("[db] setOutOfStock error:", err.message)
+    return false
+  } finally {
+    client.release()
+  }
+}
+
+export async function getOutOfStockItems(): Promise<Set<number>> {
+  if (!connectionString) {
+    return new Set()
+  }
+  
+  await ensureOutOfStockTable()
+  const client = await pool.connect()
+  try {
+    const res = await client.query("SELECT product_id FROM out_of_stock_items")
+    return new Set(res.rows.map(row => row.product_id))
+  } catch (err: any) {
+    console.error("[db] getOutOfStockItems error:", err.message)
+    return new Set()
+  } finally {
+    client.release()
+  }
+}

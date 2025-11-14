@@ -61,37 +61,32 @@ export default function AdminProductsPage() {
     }
 
     try {
+      const currentProduct = products.find(p => p.id === productId)
+      if (!currentProduct) return
+
       const response = await fetch("/api/products/update-stock", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
           "x-admin-token": token,
         },
-        body: JSON.stringify({ productId, outOfStock: !products.find(p => p.id === productId)?.outOfStock }),
+        body: JSON.stringify({ productId, outOfStock: !currentProduct.outOfStock }),
       })
 
       if (!response.ok) {
-        throw new Error("Failed to update stock status")
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || "Failed to update stock status")
       }
 
-      const updated = await response.json()
-      
-      // Update local state
-      setProducts(prevProducts => 
-        prevProducts.map(p => 
-          p.id === productId ? { ...p, outOfStock: updated.outOfStock } : p
-        )
-      )
-      
-      // Reload products from API to ensure consistency
+      // Refresh products from API to get the canonical state from DB
       const refreshResponse = await fetch("/api/products")
       if (refreshResponse.ok) {
         const refreshedProducts = await refreshResponse.json()
         setProducts(refreshedProducts)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to update stock:", error)
-      alert("Failed to update stock status. Please try again.")
+      alert(`Failed to update stock status: ${error.message}`)
     } finally {
       setUpdatingId(null)
     }
