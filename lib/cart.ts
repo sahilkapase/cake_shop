@@ -69,6 +69,16 @@ export function addToCart(item: CartItem) {
     window.dispatchEvent(new Event("cartUpdated"))
   }
 
+  // Vibrate briefly on supported devices to give haptic feedback
+  try {
+    if (typeof navigator !== "undefined" && typeof (navigator as any).vibrate === "function") {
+      // short 50ms vibration; browsers may ignore if not a user gesture
+      ;(navigator as any).vibrate(50)
+    }
+  } catch (e) {
+    // ignore vibration errors
+  }
+
   return cart
 }
 
