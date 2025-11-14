@@ -11,6 +11,8 @@ import { Card } from "@/components/ui/card"
 import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import { loadCart, saveCart, type CartItem as CartItemData } from "@/lib/cart"
+import { Button as IconButton } from "@/components/ui/button"
+import { Minus, Plus } from "lucide-react"
 import { useRazorpayPayment } from "@/hooks/use-razorpay-payment"
 
 const TAX_RATE = 0.05
@@ -42,6 +44,15 @@ export default function CheckoutPage() {
     }
     setIsLoading(false)
   }, [router])
+
+  const updateQuantity = (index: number, newQty: number) => {
+    setCart((prev) => {
+      const copy = [...prev]
+      copy[index] = { ...copy[index], quantity: Math.max(1, newQty) }
+      saveCart(copy)
+      return copy
+    })
+  }
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -294,12 +305,21 @@ export default function CheckoutPage() {
               <h2 className="font-bold text-lg mb-4">Order Summary</h2>
 
               <div className="space-y-3 mb-6 pb-6 border-b border-border max-h-48 overflow-y-auto">
-                {cart.map((item) => (
-                  <div key={`${item.cakeId}-${item.weight}`} className="flex justify-between text-sm">
-                    <span>
-                      {item.cakeName} ({item.weight}) x {item.quantity}
-                    </span>
-                    <span className="font-semibold">₹{item.pricePerUnit * item.quantity}</span>
+                {cart.map((item, idx) => (
+                  <div key={`${item.cakeId}-${item.weight}`} className="flex items-center justify-between text-sm gap-3">
+                    <div className="flex-1">
+                      <div className="truncate">{item.cakeName} ({item.weight})</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <IconButton variant="outline" size="sm" onClick={() => updateQuantity(idx, item.quantity - 1)}>
+                          <Minus className="w-3 h-3" />
+                        </IconButton>
+                        <span className="w-8 text-center font-semibold">{item.quantity}</span>
+                        <IconButton variant="outline" size="sm" onClick={() => updateQuantity(idx, item.quantity + 1)}>
+                          <Plus className="w-3 h-3" />
+                        </IconButton>
+                      </div>
+                    </div>
+                    <div className="font-semibold">₹{item.pricePerUnit * item.quantity}</div>
                   </div>
                 ))}
               </div>
