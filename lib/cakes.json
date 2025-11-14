@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "name": "Chocolate Delight",
+    "price": 550,
+    "description": "Rich, moist chocolate cake with smooth chocolate frosting",
+    "image": "/cake4.jpg?height=400&width=400",
+    "outOfStock": false
+  },
+  {
+    "id": 2,
+    "name": "Black Forest",
+    "price": 500,
+    "description": "Classic black forest with cherries and whipped cream",
+    "image": "/cake1.jpg?height=400&width=400",
+    "outOfStock": false
+  },
+  {
+    "id": 3,
+    "name": "Red Velvet",
+    "price": 650,
+    "description": "Elegant red velvet with cream cheese frosting",
+    "image": "/cake3.jpg?height=400&width=400",
+    "outOfStock": false
+  },
+  {
+    "id": 4,
+    "name": "Butterscotch Dream",
+    "price": 450,
+    "description": "Buttery and sweet butterscotch with caramel drizzle",
+    "image": "/cake5.jpg?height=400&width=400",
+    "outOfStock": false
+  },
+  {
+    "id": 5,
+    "name": "Fruit Cake",
+    "price": 600,
+    "description": "Traditional fruit cake with assorted dried fruits",
+    "image": "/cake6.jpg?height=400&width=400",
+    "outOfStock": false
+  }
+]
