@@ -2,9 +2,24 @@ import { Header } from "@/components/header"
 import { Hero } from "@/components/hero"
 import { ProductCard } from "@/components/product-card"
 import { Footer } from "@/components/footer"
-import cakes from "@/lib/cakes.json"
 
-export default function Home() {
+export default async function Home() {
+  // Fetch products from API (no-cache) so out-of-stock updates are reflected in real-time
+  let products = []
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/products`, {
+      cache: "no-store",
+    })
+    if (res.ok) {
+      products = await res.json()
+    }
+  } catch (e) {
+    // Fallback to static file if API fails
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const cakes = require("@/lib/cakes.json")
+    products = cakes
+  }
+
   return (
     <>
       <Header />
@@ -18,7 +33,7 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {cakes.map((cake) => (
+            {products.map((cake: any) => (
               <ProductCard
                 key={cake.id}
                 id={cake.id}

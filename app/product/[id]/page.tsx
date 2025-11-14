@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -8,7 +8,9 @@ import { Card } from "@/components/ui/card"
 import { ChevronLeft, Minus, Plus } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import cakes from "@/lib/cakes.json"
+// We'll fetch product details from the API to get live outOfStock status
+// and keep client behavior consistent across instances.
+// Remove static cakes import.
 import { addToCart, saveCart } from "@/lib/cart"
 
 const WEIGHT_OPTIONS = ["250gm", "0.5kg", "1kg", "2kg"]
@@ -23,11 +25,34 @@ export default function ProductPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const cakeId = Number.parseInt(params.id, 10)
-  const cake = cakes.find((c) => c.id === cakeId)
 
+  const [cake, setCake] = useState<any | null>(null)
   const [selectedWeight, setSelectedWeight] = useState("250gm")
   const [quantity, setQuantity] = useState(1)
   const [customMessage, setCustomMessage] = useState("")
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/products`, { cache: "no-store" })
+        if (!res.ok) throw new Error("Failed to load products")
+        const products = await res.json()
+        const found = products.find((p: any) => p.id === cakeId)
+        if (mounted) setCake(found || null)
+      } catch (err) {
+        console.error("Failed to fetch product:", err)
+        // fallback to static file if API fails
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const cakes = require("@/lib/cakes.json")
+        const found = cakes.find((p: any) => p.id === cakeId)
+        if (mounted) setCake(found || null)
+      }
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [cakeId])
 
   if (!cake) {
     return (
@@ -61,7 +86,6 @@ export default function ProductPage() {
   const handleAddToCart = () => {
     if (isOutOfStock) return
     addToCart(buildCartItem())
-    alert("Added to cart!")
   }
 
   const handleBuyNow = () => {

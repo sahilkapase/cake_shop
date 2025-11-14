@@ -47,7 +47,8 @@ export function ConfettiAnimation() {
 
     // Create initial burst of particles
     const createBurst = () => {
-      const burstCount = 80
+      // keep burst smaller for short duration animations
+      const burstCount = 40
       const centerX = canvas.width / 2
       const centerY = canvas.height / 2
 
@@ -64,34 +65,34 @@ export function ConfettiAnimation() {
           rotation: Math.random() * Math.PI * 2,
           rotationSpeed: (Math.random() - 0.5) * 0.15,
           life: 0,
-          maxLife: 2.5 + Math.random() * 1.5,
+          maxLife: 0.8 + Math.random() * 0.6,
           size: isFlower ? 20 + Math.random() * 15 : 6 + Math.random() * 4,
           type: isFlower ? "flower" : "confetti",
           color: colors[Math.floor(Math.random() * colors.length)],
         })
       }
 
-      // Create secondary wave with more flowers
+      // Create small secondary wave with flowers (short-lived)
       setTimeout(() => {
-        const secondWaveCount = 50
+        const secondWaveCount = 20
         for (let i = 0; i < secondWaveCount; i++) {
           const angle = Math.random() * Math.PI * 2
-          const speed = 2 + Math.random() * 5
+          const speed = 1 + Math.random() * 3
           particlesRef.current.push({
-            x: centerX + (Math.random() - 0.5) * 100,
-            y: centerY + (Math.random() - 0.5) * 100,
+            x: centerX + (Math.random() - 0.5) * 80,
+            y: centerY + (Math.random() - 0.5) * 80,
             vx: Math.cos(angle) * speed,
             vy: Math.sin(angle) * speed - 1,
             rotation: Math.random() * Math.PI * 2,
             rotationSpeed: (Math.random() - 0.5) * 0.2,
             life: 0,
-            maxLife: 3 + Math.random() * 2,
-            size: 18 + Math.random() * 18,
+            maxLife: 0.8 + Math.random() * 0.6,
+            size: 14 + Math.random() * 12,
             type: "flower",
             color: colors[Math.floor(Math.random() * colors.length)],
           })
         }
-      }, 300)
+      }, 200)
     }
 
     const animate = () => {
@@ -146,7 +147,7 @@ export function ConfettiAnimation() {
         return particle.life < particle.maxLife
       })
 
-      // Continue animation if particles remain or continue for a while
+      // Continue animation while particles exist
       if (particlesRef.current.length > 0) {
         animationRef.current = requestAnimationFrame(animate)
       }
@@ -155,6 +156,12 @@ export function ConfettiAnimation() {
     // Start animation
     createBurst()
     animate()
+
+    // Ensure animation ends within ~1s for short UX
+    const stopTimeout = setTimeout(() => {
+      particlesRef.current = []
+      if (animationRef.current) cancelAnimationFrame(animationRef.current)
+    }, 1000)
 
     // Handle window resize
     const handleResize = () => {
@@ -169,6 +176,7 @@ export function ConfettiAnimation() {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
       }
+      clearTimeout(stopTimeout)
     }
   }, [])
 
