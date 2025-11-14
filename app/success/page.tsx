@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { ConfettiAnimation } from "@/components/confetti-animation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { 
@@ -21,6 +22,7 @@ import {
   User
 } from "lucide-react"
 import Link from "next/link"
+import { generatePDFReceipt } from "@/lib/pdf-receipt"
 
 export default function SuccessPage() {
   const searchParams = useSearchParams()
@@ -29,6 +31,8 @@ export default function SuccessPage() {
   const [orderDetails, setOrderDetails] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
+  const [showConfetti, setShowConfetti] = useState(false)
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false)
 
   useEffect(() => {
     if (!orderId || orderId === "undefined") {
@@ -67,6 +71,7 @@ export default function SuccessPage() {
         console.log(`[success] Order ${orderId} loaded successfully`)
         setOrderDetails(order)
         setError("") // Clear any previous errors
+        setShowConfetti(true) // Trigger confetti animation
         setIsLoading(false)
       } catch (err) {
         console.error("[success] Error fetching order:", err)
@@ -120,49 +125,58 @@ export default function SuccessPage() {
     }
   })()
 
-  const handleDownloadReceipt = () => {
+  const handleDownloadReceipt = async () => {
     if (!orderDetails) return
 
-    const receipt = [
-      "SAUNDRYA CAKES MUMBAI - ORDER RECEIPT",
-      "=".repeat(50),
-      "",
-      `Order ID: ${orderDetails.id}`,
-      `Date: ${new Date(orderDetails.createdAt).toLocaleString("en-IN")}`,
-      "",
-      "CUSTOMER DETAILS:",
-      `Name: ${orderDetails.delivery.name}`,
-      `Phone: ${orderDetails.delivery.phone}`,
-      `Address: ${orderDetails.delivery.address}${
-        orderDetails.delivery.postalCode ? `, ${orderDetails.delivery.postalCode}` : ""
-      }`,
-      `Delivery Date: ${new Date(orderDetails.delivery.deliveryDate).toLocaleDateString("en-IN")}`,
-      orderDetails.delivery.timeWindow ? `Time Window: ${orderDetails.delivery.timeWindow}` : "",
-      "",
-      "ITEMS:",
-      ...orderDetails.items.map(
-        (item: any) => `${item.cakeName} (${item.weight}) x ${item.quantity} - ₹${item.pricePerUnit * item.quantity}`,
-      ),
-      "",
-      "PRICE SUMMARY:",
-      `Subtotal: ₹${orderDetails.subtotal}`,
-      `Tax (5%): ₹${orderDetails.tax}`,
-      "Shipping: Free",
-      `Total: ₹${orderDetails.total}`,
-      "",
-      "=".repeat(50),
-      "Thank you for choosing SAUNDRYA CAKES Mumbai!",
-    ]
-      .filter(Boolean)
-      .join("\n")
+    try {
+      setIsDownloadingPDF(true)
+      await generatePDFReceipt(orderDetails)
+    } catch (error) {
+      console.error("Error generating PDF:", error)
+      // Fallback to text download
+      const receipt = [
+        "SAUNDRYA CAKES MUMBAI - ORDER RECEIPT",
+        "=".repeat(50),
+        "",
+        `Order ID: ${orderDetails.id}`,
+        `Date: ${new Date(orderDetails.createdAt).toLocaleString("en-IN")}`,
+        "",
+        "CUSTOMER DETAILS:",
+        `Name: ${orderDetails.delivery.name}`,
+        `Phone: ${orderDetails.delivery.phone}`,
+        `Address: ${orderDetails.delivery.address}${
+          orderDetails.delivery.postalCode ? `, ${orderDetails.delivery.postalCode}` : ""
+        }`,
+        `Delivery Date: ${new Date(orderDetails.delivery.deliveryDate).toLocaleDateString("en-IN")}`,
+        orderDetails.delivery.timeWindow ? `Time Window: ${orderDetails.delivery.timeWindow}` : "",
+        "",
+        "ITEMS:",
+        ...orderDetails.items.map(
+          (item: any) => `${item.cakeName} (${item.weight}) x ${item.quantity} - ₹${item.pricePerUnit * item.quantity}`,
+        ),
+        "",
+        "PRICE SUMMARY:",
+        `Subtotal: ₹${orderDetails.subtotal}`,
+        `Tax (5%): ₹${orderDetails.tax}`,
+        "Shipping: Free",
+        `Total: ₹${orderDetails.total}`,
+        "",
+        "=".repeat(50),
+        "Thank you for choosing SAUNDRYA CAKES Mumbai!",
+      ]
+        .filter(Boolean)
+        .join("\n")
 
-    const blob = new Blob([receipt], { type: "text/plain" })
-    const url = window.URL.createObjectURL(blob)
-    const anchor = document.createElement("a")
-    anchor.href = url
-    anchor.download = `receipt-${orderDetails.id}.txt`
-    anchor.click()
-    window.URL.revokeObjectURL(url)
+      const blob = new Blob([receipt], { type: "text/plain" })
+      const url = window.URL.createObjectURL(blob)
+      const anchor = document.createElement("a")
+      anchor.href = url
+      anchor.download = `receipt-${orderDetails.id}.txt`
+      anchor.click()
+      window.URL.revokeObjectURL(url)
+    } finally {
+      setIsDownloadingPDF(false)
+    }
   }
 
   if (error && !orderDetails) {
@@ -203,7 +217,8 @@ export default function SuccessPage() {
   return (
     <>
       <Header />
-      <main className="max-w-3xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 lg:py-12 min-h-screen bg-gradient-to-br from-background via-secondary/10 to-accent/5">
+      {showConfetti && <ConfettiAnimation />}
+      <main className="max-w-3xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 lg:py-12 min-h-screen bg-linear-to-br from-background via-secondary/10 to-accent/5">
         {orderDetails && (
           <div className="space-y-4 sm:space-y-5 md:space-y-6">
             {/* Success Header Card - Enhanced Mobile Design */}
@@ -250,14 +265,14 @@ export default function SuccessPage() {
 
               {/* Order Info Grid - Enhanced Mobile Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 relative z-10">
-                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-primary/8 via-primary/5 to-primary/8 border-2 border-primary/20 shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02]">
+                <div className="p-4 sm:p-5 rounded-2xl bg-linear-to-br from-primary/8 via-primary/5 to-primary/8 border-2 border-primary/20 shadow-md hover:shadow-lg transition-shadow transform hover:scale-[1.02]">
                   <p className="text-[11px] sm:text-xs text-muted-foreground mb-2 uppercase tracking-wider font-semibold flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
                     Order ID
                   </p>
-                  <p className="font-mono text-sm sm:text-base md:text-lg font-bold text-foreground break-all leading-tight">{orderDetails.id}</p>
+                  <p className="font-mono text-sm sm:text-base md:text-lg font-bold text-foreground wrap-break-word leading-tight">{orderDetails.id}</p>
                 </div>
-                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-green-50 via-green-100/60 to-green-50 border-2 border-green-300/50 shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02]">
+                <div className="p-4 sm:p-5 rounded-2xl bg-linear-to-br from-green-50 via-green-100/60 to-green-50 border-2 border-green-300/50 shadow-md hover:shadow-lg transition-shadow transform hover:scale-[1.02]">
                   <p className="text-[11px] sm:text-xs text-muted-foreground mb-2 uppercase tracking-wider font-semibold flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                     Payment
@@ -267,7 +282,7 @@ export default function SuccessPage() {
                     <p className="font-bold text-base sm:text-lg text-green-700">Paid</p>
                   </div>
                 </div>
-                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-accent/8 via-accent/5 to-accent/8 border-2 border-accent/20 shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02] sm:col-span-2 lg:col-span-1">
+                <div className="p-4 sm:p-5 rounded-2xl bg-linear-to-br from-accent/8 via-accent/5 to-accent/8 border-2 border-accent/20 shadow-md hover:shadow-lg transition-shadow transform hover:scale-[1.02] sm:col-span-2 lg:col-span-1">
                   <p className="text-[11px] sm:text-xs text-muted-foreground mb-2 uppercase tracking-wider font-semibold flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>
                     Status
@@ -355,45 +370,45 @@ export default function SuccessPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 relative z-10">
-                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-background via-secondary/10 to-background border-2 border-primary/10 shadow-md hover:shadow-lg transition-all">
+                <div className="p-4 sm:p-5 rounded-2xl bg-linear-to-br from-background via-secondary/10 to-background border-2 border-primary/10 shadow-md hover:shadow-lg transition-shadow">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
                       <User className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                     </div>
                     <p className="text-[11px] sm:text-xs text-muted-foreground uppercase tracking-wider font-bold">Name</p>
                   </div>
-                  <p className="font-bold text-base sm:text-lg break-words text-foreground">{orderDetails.delivery.name}</p>
+                  <p className="font-bold text-base sm:text-lg wrap-break-word text-foreground">{orderDetails.delivery.name}</p>
                 </div>
-                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-background via-secondary/10 to-background border-2 border-primary/10 shadow-md hover:shadow-lg transition-all">
+                <div className="p-4 sm:p-5 rounded-2xl bg-linear-to-br from-background via-secondary/10 to-background border-2 border-primary/10 shadow-md hover:shadow-lg transition-shadow">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
                       <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                     </div>
                     <p className="text-[11px] sm:text-xs text-muted-foreground uppercase tracking-wider font-bold">Phone</p>
                   </div>
-                  <p className="font-bold text-base sm:text-lg break-words text-foreground">{orderDetails.delivery.phone}</p>
+                  <p className="font-bold text-base sm:text-lg wrap-break-word text-foreground">{orderDetails.delivery.phone}</p>
                 </div>
-                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-background via-secondary/10 to-background border-2 border-accent/20 shadow-md hover:shadow-lg transition-all sm:col-span-2">
+                <div className="p-4 sm:p-5 rounded-2xl bg-linear-to-br from-background via-secondary/10 to-background border-2 border-accent/20 shadow-md hover:shadow-lg transition-shadow sm:col-span-2">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="p-2 rounded-lg bg-accent/10 border border-accent/20">
                       <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
                     </div>
                     <p className="text-[11px] sm:text-xs text-muted-foreground uppercase tracking-wider font-bold">Address</p>
                   </div>
-                  <p className="font-bold text-base sm:text-lg break-words leading-relaxed text-foreground">
+                  <p className="font-bold text-base sm:text-lg wrap-break-word leading-relaxed text-foreground">
                     {orderDetails.delivery.address}
                     {orderDetails.delivery.postalCode ? `, ${orderDetails.delivery.postalCode}` : ""}
                   </p>
                 </div>
                 {orderDetails.delivery.deliveryDate && (
-                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-background via-secondary/10 to-background border-2 border-primary/10 shadow-md hover:shadow-lg transition-all">
+                  <div className="p-4 sm:p-5 rounded-2xl bg-linear-to-br from-background via-secondary/10 to-background border-2 border-primary/10 shadow-md hover:shadow-lg transition-shadow">
                     <div className="flex items-center gap-2 mb-3">
                       <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
                         <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                       </div>
                       <p className="text-[11px] sm:text-xs text-muted-foreground uppercase tracking-wider font-bold">Delivery Date</p>
                     </div>
-                    <p className="font-bold text-sm sm:text-base break-words leading-relaxed text-foreground">
+                    <p className="font-bold text-sm sm:text-base wrap-break-word leading-relaxed text-foreground">
                       {new Date(orderDetails.delivery.deliveryDate).toLocaleDateString("en-IN", {
                         weekday: "long",
                         year: "numeric",
@@ -404,7 +419,7 @@ export default function SuccessPage() {
                   </div>
                 )}
                 {orderDetails.delivery.timeWindow && (
-                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-background via-secondary/10 to-background border-2 border-primary/10 shadow-md hover:shadow-lg transition-all">
+                  <div className="p-4 sm:p-5 rounded-2xl bg-linear-to-br from-background via-secondary/10 to-background border-2 border-primary/10 shadow-md hover:shadow-lg transition-shadow">
                     <div className="flex items-center gap-2 mb-3">
                       <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
                         <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
@@ -441,10 +456,11 @@ export default function SuccessPage() {
                   onClick={handleDownloadReceipt} 
                   variant="outline" 
                   size="lg"
-                  className="w-full text-base sm:text-lg border-2 border-primary/30 hover:bg-gradient-to-r hover:from-accent/10 hover:to-accent/5 transition-all h-14 sm:h-16 rounded-2xl font-bold hover:scale-[1.02] transform shadow-md hover:shadow-lg"
+                  disabled={isDownloadingPDF}
+                  className="w-full text-base sm:text-lg border-2 border-primary/30 hover:bg-linear-to-r hover:from-accent/10 hover:to-accent/5 transition-all h-14 sm:h-16 rounded-2xl font-bold hover:scale-[1.02] transform shadow-md hover:shadow-lg"
                 >
                   <Download className="w-5 h-5 sm:w-6 sm:h-6 mr-2.5 shrink-0" />
-                  <span>Download Receipt</span>
+                  <span>{isDownloadingPDF ? "Generating PDF..." : "Download Receipt (PDF)"}</span>
                 </Button>
               </div>
             </Card>
