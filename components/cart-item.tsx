@@ -12,15 +12,28 @@ interface CartItemProps {
   pricePerUnit: number
   onUpdateQuantity: (id: string, quantity: number) => void
   onRemove: (id: string) => void
+  onChangeWeight: (id: string, newWeight: string) => void
 }
 
-export function CartItem({ id, cakeName, weight, quantity, pricePerUnit, onUpdateQuantity, onRemove }: CartItemProps) {
+export function CartItem({ id, cakeName, weight, quantity, pricePerUnit, onUpdateQuantity, onRemove, onChangeWeight }: CartItemProps) {
   return (
     <Card className="p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <h3 className="font-semibold">{cakeName}</h3>
-          <p className="text-sm text-muted-foreground">{weight}</p>
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-muted-foreground">Weight:</p>
+            <select
+              value={weight}
+              onChange={(e) => onChangeWeight(id, e.target.value)}
+              className="px-2 py-1 border border-border rounded-md bg-white"
+            >
+              <option value="250gm">250gm</option>
+              <option value="0.5kg">0.5kg</option>
+              <option value="1kg">1kg</option>
+              <option value="2kg">2kg</option>
+            </select>
+          </div>
           <p className="text-sm font-semibold mt-2">₹{pricePerUnit} each</p>
         </div>
 

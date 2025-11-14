@@ -8,7 +8,14 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
-import { CartItem as CartItemData, loadCart, saveCart } from "@/lib/cart"
+import { CartItem as CartItemData, loadCart, saveCart, removeFromCart } from "@/lib/cart"
+
+const WEIGHT_MULTIPLIERS: Record<string, number> = {
+  "250gm": 0.25,
+  "0.5kg": 0.5,
+  "1kg": 1,
+  "2kg": 2,
+}
 
 const TAX_RATE = 0.05 // 5% tax
 
@@ -46,8 +53,29 @@ export default function CartPage() {
   }
 
   const handleRemove = (id: string) => {
+    // Use the centralized helper so removal persists and triggers vibration
+    removeFromCart(id)
+    setCart(loadCart())
+  }
+
+  const handleChangeWeight = (id: string, newWeight: string) => {
     setCart((prev) => {
-      const nextCart = prev.filter((item) => `${item.cakeId}-${item.weight}` !== id)
+      const nextCart = prev.map((item) => {
+        const itemId = `${item.cakeId}-${item.weight}`
+        if (itemId !== id) return item
+
+        const oldMultiplier = WEIGHT_MULTIPLIERS[item.weight] ?? 1
+        const newMultiplier = WEIGHT_MULTIPLIERS[newWeight] ?? 1
+        const basePrice = Math.round(item.pricePerUnit / oldMultiplier)
+        const newPricePerUnit = Math.round(basePrice * newMultiplier)
+
+        return {
+          ...item,
+          weight: newWeight,
+          pricePerUnit: newPricePerUnit,
+        }
+      })
+      saveCart(nextCart)
       return nextCart
     })
   }
@@ -92,6 +120,7 @@ export default function CartPage() {
                   pricePerUnit={item.pricePerUnit}
                   onUpdateQuantity={handleUpdateQuantity}
                   onRemove={handleRemove}
+                  onChangeWeight={handleChangeWeight}
                 />
               ))}
             </div>

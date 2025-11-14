@@ -79,6 +79,29 @@ export function addToCart(item: CartItem) {
     // ignore vibration errors
   }
 
+
+export function removeFromCart(key: string) {
+  const cart = loadCart()
+  const next = cart.filter((item) => `${item.cakeId}-${item.weight}` !== key)
+
+  saveCart(next)
+
+  // Dispatch custom event to notify other components
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("cartUpdated"))
+  }
+
+  // Vibrate briefly on supported devices to give haptic feedback for removal
+  try {
+    if (typeof navigator !== "undefined" && typeof (navigator as any).vibrate === "function") {
+      ;(navigator as any).vibrate(40)
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return next
+}
   return cart
 }
 
