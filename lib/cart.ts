@@ -79,6 +79,8 @@ export function addToCart(item: CartItem) {
     // ignore vibration errors
   }
 
+  return cart
+}
 
 export function removeFromCart(key: string) {
   const cart = loadCart()
@@ -101,7 +103,5 @@ export function removeFromCart(key: string) {
   }
 
   return next
-}
-  return cart
 }
 
